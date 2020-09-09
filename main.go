@@ -72,11 +72,39 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if sessionManager.Exists(r.Context(), "access_token") == false {
+		http.Redirect(w, r, "/login", http.StatusUnauthorized)
+		return
+	}
+
 	fmt.Fprintf(w, "POST request successful \n\n")
 	email := r.FormValue("inputEmail")
 	password := r.FormValue("inputPassword")
 
 	fmt.Fprintf(w, "Name: %s \nPassword: %s \n", email, password)
+}
 
-	fmt.Fprintf(w, "\n \n[TODO] Implements redirect if user is not logged")
+func apiRequest(r *http.Request, urlGit string) {
+
+	req, err := http.NewRequest("POST", urlGit, nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	req.Header.Add("Accept", "application/vnd.github.v3+json, application/json")
+	req.Header.Add("User-Agent", fmt.Sprintf("http://localhost:%s", PortAddress))
+
+	if sessionManager.Exists(r.Context(), "access_token") {
+		req.Header.Add("Authorization", "Bearer")
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(body)
+
 }
