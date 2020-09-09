@@ -5,15 +5,41 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
+
+	"github.com/alexedwards/scs/v2"
 )
 
-func main() {
-	http.HandleFunc("/", homeHandler)
-	http.HandleFunc("/login", loginHandler)
-	http.HandleFunc("/admin", adminHandler)
+const (
+	//AuthorizeURL is the URL we'll send the user to first to get their authorization
+	AuthorizeURL = "https://github.com/login/oauth/authorize"
+	//TokenURL is the endpoint we'll request an access token from
+	TokenURL = "https://github.com/login/oauth/access_token"
+	//APIURLBase is the GitHub base URL for API requests
+	APIURLBase = "https://api.github.com/"
+	//BaseURL for this script, used as the redirect URL
+	BaseURL = "https://localhost"
+	//PortAddress is where the server is listening
+	PortAddress = "8080"
+	//
+)
 
-	fmt.Println("Starting server at port 8080...")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+var sessionManager *scs.SessionManager
+
+func main() {
+
+	// Initialize a new session manager and configure the session lifetime.
+	sessionManager = scs.New()
+	sessionManager.Lifetime = 24 * time.Hour
+
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", homeHandler)
+	mux.HandleFunc("/login", loginHandler)
+	mux.HandleFunc("/admin", adminHandler)
+
+	fmt.Printf("Starting server at port %s...", PortAddress)
+	if err := http.ListenAndServe(fmt.Sprintf(":%s", PortAddress), sessionManager.LoadAndSave(mux)); err != nil {
 		log.Fatal(err)
 	}
 }
